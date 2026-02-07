@@ -1,15 +1,17 @@
 from fastapi import FastAPI
+from app.core.config import settings
+from app.core.database import Base, engine
+from app.routers import todo_router, health_router
 
-app = FastAPI(title="Hello To-Do API")
+# Tạo tất cả tables
+Base.metadata.create_all(bind=engine)
 
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    debug=settings.DEBUG
+)
 
-@app.get("/")
-def root():
-    """Endpoint chào mừng"""
-    return {"message": "Chào mừng đến với To-Do API!"}
-
-
-@app.get("/health")
-def health_check():
-    """Endpoint kiểm tra trạng thái server"""
-    return {"status": "ok"}
+# Include routers
+app.include_router(health_router)
+app.include_router(todo_router, prefix=settings.API_V1_PREFIX)
