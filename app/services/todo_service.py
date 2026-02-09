@@ -41,6 +41,16 @@ class ToDoService:
         items = [ToDoResponse.model_validate(todo) for todo in todos]
         return ToDoListResponse(items=items, total=total, limit=limit, offset=offset)
     
+    def get_overdue_todos(self, owner_id: int) -> list[ToDoResponse]:
+        """Lấy danh sách ToDo quá hạn"""
+        todos = self.repository.get_overdue(owner_id)
+        return [ToDoResponse.model_validate(todo) for todo in todos]
+    
+    def get_today_todos(self, owner_id: int) -> list[ToDoResponse]:
+        """Lấy danh sách ToDo hôm nay"""
+        todos = self.repository.get_today(owner_id)
+        return [ToDoResponse.model_validate(todo) for todo in todos]
+    
     def get_todo(self, todo_id: int, owner_id: int) -> ToDoResponse:
         """Lấy chi tiết một ToDo"""
         todo = self.get_todo_or_404(todo_id, owner_id)
@@ -51,7 +61,9 @@ class ToDoService:
         todo = self.repository.create(
             title=todo_data.title,
             description=todo_data.description,
-            owner_id=owner_id
+            owner_id=owner_id,
+            due_date=todo_data.due_date,
+            tag_ids=todo_data.tag_ids
         )
         return ToDoResponse.model_validate(todo)
     
@@ -60,9 +72,11 @@ class ToDoService:
         todo = self.get_todo_or_404(todo_id, owner_id)
         updated_todo = self.repository.update(
             todo,
+            tag_ids=todo_data.tag_ids,
             title=todo_data.title,
             description=todo_data.description,
-            is_done=todo_data.is_done
+            is_done=todo_data.is_done,
+            due_date=todo_data.due_date
         )
         return ToDoResponse.model_validate(updated_todo)
     
@@ -71,7 +85,8 @@ class ToDoService:
         todo = self.get_todo_or_404(todo_id, owner_id)
         
         update_data = todo_data.model_dump(exclude_unset=True)
-        updated_todo = self.repository.update(todo, **update_data)
+        tag_ids = update_data.pop('tag_ids', None)
+        updated_todo = self.repository.update(todo, tag_ids=tag_ids, **update_data)
         return ToDoResponse.model_validate(updated_todo)
     
     def complete_todo(self, todo_id: int, owner_id: int) -> ToDoResponse:
@@ -83,6 +98,4 @@ class ToDoService:
     def delete_todo(self, todo_id: int, owner_id: int) -> None:
         """Xóa ToDo"""
         todo = self.get_todo_or_404(todo_id, owner_id)
-        self.repository.delete(todo)
-        todo = self.get_todo_or_404(todo_id)
         self.repository.delete(todo)

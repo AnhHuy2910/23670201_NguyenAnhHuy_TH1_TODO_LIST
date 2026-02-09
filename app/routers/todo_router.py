@@ -15,6 +15,24 @@ def get_todo_service(db: Session = Depends(get_db)) -> ToDoService:
     return ToDoService(db)
 
 
+@router.get("/overdue", response_model=list[ToDoResponse])
+def get_overdue_todos(
+    current_user: User = Depends(get_current_user),
+    service: ToDoService = Depends(get_todo_service)
+):
+    """Lấy danh sách ToDo quá hạn (due_date < today và chưa hoàn thành)"""
+    return service.get_overdue_todos(owner_id=current_user.id)
+
+
+@router.get("/today", response_model=list[ToDoResponse])
+def get_today_todos(
+    current_user: User = Depends(get_current_user),
+    service: ToDoService = Depends(get_todo_service)
+):
+    """Lấy danh sách ToDo hôm nay (due_date = today)"""
+    return service.get_today_todos(owner_id=current_user.id)
+
+
 @router.post("", response_model=ToDoResponse, status_code=201)
 def create_todo(
     todo: ToDoCreate,
@@ -89,7 +107,4 @@ def delete_todo(
 ):
     """Xóa ToDo theo ID (chỉ của user hiện tại)"""
     service.delete_todo(todo_id, owner_id=current_user.id)
-    return None
-    """Xóa ToDo theo ID"""
-    service.delete_todo(todo_id)
     return None
