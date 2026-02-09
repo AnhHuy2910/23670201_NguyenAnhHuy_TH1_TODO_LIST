@@ -12,14 +12,15 @@ class ToDoRepository:
     
     def get_all(
         self,
+        owner_id: int,
         is_done: Optional[bool] = None,
         q: Optional[str] = None,
         sort: Optional[str] = None,
         limit: int = 10,
         offset: int = 0
     ) -> tuple[list[ToDo], int]:
-        """Lấy danh sách ToDo với filter, search, sort và pagination từ DB"""
-        query = self.db.query(ToDo)
+        """Lấy danh sách ToDo của owner với filter, search, sort và pagination từ DB"""
+        query = self.db.query(ToDo).filter(ToDo.owner_id == owner_id)
         
         # Filter by is_done
         if is_done is not None:
@@ -50,13 +51,16 @@ class ToDoRepository:
         
         return todos, total
     
-    def get_by_id(self, todo_id: int) -> Optional[ToDo]:
-        """Lấy ToDo theo ID"""
-        return self.db.query(ToDo).filter(ToDo.id == todo_id).first()
+    def get_by_id(self, todo_id: int, owner_id: int) -> Optional[ToDo]:
+        """Lấy ToDo theo ID và owner_id"""
+        return self.db.query(ToDo).filter(
+            ToDo.id == todo_id,
+            ToDo.owner_id == owner_id
+        ).first()
     
-    def create(self, title: str, description: Optional[str] = None) -> ToDo:
+    def create(self, title: str, owner_id: int, description: Optional[str] = None) -> ToDo:
         """Tạo ToDo mới"""
-        new_todo = ToDo(title=title, description=description, is_done=False)
+        new_todo = ToDo(title=title, description=description, is_done=False, owner_id=owner_id)
         self.db.add(new_todo)
         self.db.commit()
         self.db.refresh(new_todo)
