@@ -6,3 +6,12 @@ alembic
 passlib[bcrypt]
 python-jose[cryptography]
 email-validator
+python-multipart
+
+# Database drivers
+psycopg2-binary  # PostgreSQL
+
+# Testing
+pytest
+pytest-cov
+httpx
