@@ -4,13 +4,13 @@ REST API quản lý ToDo với FastAPI, SQLAlchemy, JWT Authentication.
 
 ## Tính năng
 
-- ✅ **CRUD ToDo** - Tạo, đọc, cập nhật, xóa việc cần làm
-- ✅ **Authentication** - Đăng ký, đăng nhập với JWT
-- ✅ **Tags** - Gắn nhãn cho các ToDo
-- ✅ **Due Date** - Đặt deadline cho ToDo
-- ✅ **Overdue/Today** - Xem việc quá hạn và việc hôm nay
-- ✅ **Filter/Search/Sort** - Lọc, tìm kiếm, sắp xếp
-- ✅ **Pagination** - Phân trang kết quả
+- **CRUD ToDo** - Tạo, đọc, cập nhật, xóa việc cần làm
+- **Authentication** - Đăng ký, đăng nhập với JWT
+- **Tags** - Gắn nhãn cho các ToDo
+- **Due Date** - Đặt deadline cho ToDo
+- **Overdue/Today** - Xem việc quá hạn và việc hôm nay
+- **Filter/Search/Sort** - Lọc, tìm kiếm, sắp xếp
+- **Pagination** - Phân trang kết quả
 
 ## Cài đặt
 
