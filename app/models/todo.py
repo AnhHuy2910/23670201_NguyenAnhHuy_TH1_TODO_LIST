@@ -42,6 +42,7 @@ class ToDo(Base):
     due_date = Column(Date, nullable=True)  # Deadline
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)  # Soft delete
     
     # Foreign key to users
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -49,3 +50,8 @@ class ToDo(Base):
     # Relationships
     owner = relationship("User", back_populates="todos")
     tags = relationship("Tag", secondary=todo_tags, back_populates="todos")
+    
+    @property
+    def is_deleted(self) -> bool:
+        """Check if todo is soft deleted"""
+        return self.deleted_at is not None

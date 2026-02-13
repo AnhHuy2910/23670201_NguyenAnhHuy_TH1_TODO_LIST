@@ -272,3 +272,71 @@ class TestOverdueAndToday:
         response = client.get("/api/v1/todos/today", headers=auth_headers)
         assert response.status_code == 200
         assert len(response.json()) == 1
+
+
+class TestSoftDelete:
+    """Tests for soft delete functionality"""
+    
+    def test_soft_delete_and_trash(self, client, auth_headers, test_todo):
+        """Test soft delete moves todo to trash"""
+        # Delete todo
+        response = client.delete(
+            f"/api/v1/todos/{test_todo.id}",
+            headers=auth_headers
+        )
+        assert response.status_code == 204
+        
+        # Todo should not appear in list
+        response = client.get("/api/v1/todos", headers=auth_headers)
+        assert response.json()["total"] == 0
+        
+        # Todo should appear in trash
+        response = client.get("/api/v1/todos/trash", headers=auth_headers)
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+        assert response.json()[0]["deleted_at"] is not None
+    
+    def test_restore_todo(self, client, auth_headers, test_todo):
+        """Test restore todo from trash"""
+        # Delete todo
+        client.delete(f"/api/v1/todos/{test_todo.id}", headers=auth_headers)
+        
+        # Restore todo
+        response = client.post(
+            f"/api/v1/todos/{test_todo.id}/restore",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        assert response.json()["deleted_at"] is None
+        
+        # Todo should appear in list again
+        response = client.get("/api/v1/todos", headers=auth_headers)
+        assert response.json()["total"] == 1
+    
+    def test_restore_not_deleted_todo(self, client, auth_headers, test_todo):
+        """Test restore todo that is not deleted"""
+        response = client.post(
+            f"/api/v1/todos/{test_todo.id}/restore",
+            headers=auth_headers
+        )
+        assert response.status_code == 400
+        assert "chưa bị xóa" in response.json()["detail"]
+    
+    def test_hard_delete(self, client, auth_headers, test_todo):
+        """Test permanent delete"""
+        # Hard delete
+        response = client.delete(
+            f"/api/v1/todos/{test_todo.id}/permanent",
+            headers=auth_headers
+        )
+        assert response.status_code == 204
+        
+        # Todo should not be in trash either
+        response = client.get("/api/v1/todos/trash", headers=auth_headers)
+        assert len(response.json()) == 0
+    
+    def test_trash_empty(self, client, auth_headers):
+        """Test get empty trash"""
+        response = client.get("/api/v1/todos/trash", headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json() == []

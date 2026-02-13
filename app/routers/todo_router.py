@@ -33,6 +33,36 @@ def get_today_todos(
     return service.get_today_todos(owner_id=current_user.id)
 
 
+@router.get("/trash", response_model=list[ToDoResponse])
+def get_deleted_todos(
+    current_user: User = Depends(get_current_user),
+    service: ToDoService = Depends(get_todo_service)
+):
+    """Lấy danh sách ToDo đã xóa (thùng rác)"""
+    return service.get_deleted_todos(owner_id=current_user.id)
+
+
+@router.post("/{todo_id}/restore", response_model=ToDoResponse)
+def restore_todo(
+    todo_id: int,
+    current_user: User = Depends(get_current_user),
+    service: ToDoService = Depends(get_todo_service)
+):
+    """Khôi phục ToDo từ thùng rác"""
+    return service.restore_todo(todo_id, owner_id=current_user.id)
+
+
+@router.delete("/{todo_id}/permanent", status_code=204)
+def hard_delete_todo(
+    todo_id: int,
+    current_user: User = Depends(get_current_user),
+    service: ToDoService = Depends(get_todo_service)
+):
+    """Xóa vĩnh viễn ToDo (không thể khôi phục)"""
+    service.hard_delete_todo(todo_id, owner_id=current_user.id)
+    return None
+
+
 @router.post("", response_model=ToDoResponse, status_code=201)
 def create_todo(
     todo: ToDoCreate,

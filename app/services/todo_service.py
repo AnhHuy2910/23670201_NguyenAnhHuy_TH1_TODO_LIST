@@ -51,6 +51,11 @@ class ToDoService:
         todos = self.repository.get_today(owner_id)
         return [ToDoResponse.model_validate(todo) for todo in todos]
     
+    def get_deleted_todos(self, owner_id: int) -> list[ToDoResponse]:
+        """Lấy danh sách ToDo đã xóa (trash)"""
+        todos = self.repository.get_deleted(owner_id)
+        return [ToDoResponse.model_validate(todo) for todo in todos]
+    
     def get_todo(self, todo_id: int, owner_id: int) -> ToDoResponse:
         """Lấy chi tiết một ToDo"""
         todo = self.get_todo_or_404(todo_id, owner_id)
@@ -96,6 +101,23 @@ class ToDoService:
         return ToDoResponse.model_validate(updated_todo)
     
     def delete_todo(self, todo_id: int, owner_id: int) -> None:
-        """Xóa ToDo"""
+        """Xóa ToDo (soft delete)"""
         todo = self.get_todo_or_404(todo_id, owner_id)
         self.repository.delete(todo)
+    
+    def restore_todo(self, todo_id: int, owner_id: int) -> ToDoResponse:
+        """Khôi phục ToDo đã xóa"""
+        todo = self.repository.get_by_id(todo_id, owner_id, include_deleted=True)
+        if not todo:
+            raise HTTPException(status_code=404, detail=f"ToDo với id={todo_id} không tìm thấy")
+        if todo.deleted_at is None:
+            raise HTTPException(status_code=400, detail="ToDo chưa bị xóa")
+        restored_todo = self.repository.restore(todo)
+        return ToDoResponse.model_validate(restored_todo)
+    
+    def hard_delete_todo(self, todo_id: int, owner_id: int) -> None:
+        """Xóa vĩnh viễn ToDo"""
+        todo = self.repository.get_by_id(todo_id, owner_id, include_deleted=True)
+        if not todo:
+            raise HTTPException(status_code=404, detail=f"ToDo với id={todo_id} không tìm thấy")
+        self.repository.hard_delete(todo)

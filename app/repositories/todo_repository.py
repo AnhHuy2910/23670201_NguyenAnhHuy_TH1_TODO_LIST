@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, asc
 from app.models.todo import ToDo, Tag
@@ -11,6 +11,13 @@ class ToDoRepository:
     def __init__(self, db: Session):
         self.db = db
     
+    def _base_query(self, owner_id: int, include_deleted: bool = False):
+        """Base query với filter owner và soft delete"""
+        query = self.db.query(ToDo).options(joinedload(ToDo.tags)).filter(ToDo.owner_id == owner_id)
+        if not include_deleted:
+            query = query.filter(ToDo.deleted_at.is_(None))
+        return query
+    
     def get_all(
         self,
         owner_id: int,
@@ -21,7 +28,7 @@ class ToDoRepository:
         offset: int = 0
     ) -> tuple[list[ToDo], int]:
         """Lấy danh sách ToDo của owner với filter, search, sort và pagination từ DB"""
-        query = self.db.query(ToDo).options(joinedload(ToDo.tags)).filter(ToDo.owner_id == owner_id)
+        query = self._base_query(owner_id)
         
         # Filter by is_done
         if is_done is not None:
@@ -55,8 +62,7 @@ class ToDoRepository:
     def get_overdue(self, owner_id: int) -> list[ToDo]:
         """Lấy danh sách ToDo quá hạn (due_date < today và chưa done)"""
         today = date.today()
-        return self.db.query(ToDo).options(joinedload(ToDo.tags)).filter(
-            ToDo.owner_id == owner_id,
+        return self._base_query(owner_id).filter(
             ToDo.due_date < today,
             ToDo.is_done == False
         ).order_by(ToDo.due_date).all()
@@ -64,17 +70,26 @@ class ToDoRepository:
     def get_today(self, owner_id: int) -> list[ToDo]:
         """Lấy danh sách ToDo hôm nay (due_date = today)"""
         today = date.today()
-        return self.db.query(ToDo).options(joinedload(ToDo.tags)).filter(
-            ToDo.owner_id == owner_id,
+        return self._base_query(owner_id).filter(
             ToDo.due_date == today
         ).order_by(ToDo.created_at).all()
     
-    def get_by_id(self, todo_id: int, owner_id: int) -> Optional[ToDo]:
-        """Lấy ToDo theo ID và owner_id"""
+    def get_deleted(self, owner_id: int) -> list[ToDo]:
+        """Lấy danh sách ToDo đã xóa (trash)"""
         return self.db.query(ToDo).options(joinedload(ToDo.tags)).filter(
+            ToDo.owner_id == owner_id,
+            ToDo.deleted_at.isnot(None)
+        ).order_by(desc(ToDo.deleted_at)).all()
+    
+    def get_by_id(self, todo_id: int, owner_id: int, include_deleted: bool = False) -> Optional[ToDo]:
+        """Lấy ToDo theo ID và owner_id"""
+        query = self.db.query(ToDo).options(joinedload(ToDo.tags)).filter(
             ToDo.id == todo_id,
             ToDo.owner_id == owner_id
-        ).first()
+        )
+        if not include_deleted:
+            query = query.filter(ToDo.deleted_at.is_(None))
+        return query.first()
     
     def create(
         self, 
@@ -118,8 +133,27 @@ class ToDoRepository:
         self.db.refresh(todo)
         return todo
     
-    def delete(self, todo: ToDo) -> bool:
-        """Xóa ToDo"""
+    def soft_delete(self, todo: ToDo) -> ToDo:
+        """Soft delete ToDo (đánh dấu deleted_at)"""
+        todo.deleted_at = datetime.now()
+        self.db.commit()
+        self.db.refresh(todo)
+        return todo
+    
+    def restore(self, todo: ToDo) -> ToDo:
+        """Khôi phục ToDo đã xóa"""
+        todo.deleted_at = None
+        self.db.commit()
+        self.db.refresh(todo)
+        return todo
+    
+    def hard_delete(self, todo: ToDo) -> bool:
+        """Xóa vĩnh viễn ToDo"""
         self.db.delete(todo)
         self.db.commit()
+        return True
+    
+    def delete(self, todo: ToDo) -> bool:
+        """Xóa ToDo (soft delete)"""
+        self.soft_delete(todo)
         return True

@@ -56,6 +56,7 @@ class ToDoResponse(BaseModel):
     due_date: Optional[date] = None
     created_at: datetime
     updated_at: datetime
+    deleted_at: Optional[datetime] = None
     tags: list[TagResponse] = []
     
     class Config:
